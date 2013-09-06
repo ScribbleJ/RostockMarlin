@@ -36,9 +36,9 @@
 	#ifdef CUSTOM_MENDEL_NAME
 		#define MACHINE_NAME CUSTOM_MENDEL_NAME
 	#else
-		#define MACHINE_NAME "Mendel"
+		#define MACHINE_NAME "Rostock"
 	#endif
-	#define FIRMWARE_URL "http://www.mendel-parts.com"
+	#define FIRMWARE_URL "http://scribblej.com"
 #endif
 
 #define STRINGIFY_(n) #n

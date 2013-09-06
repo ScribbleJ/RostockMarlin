@@ -1693,7 +1693,7 @@
 #define HEATER_0_PIN  9
 #define TEMP_0_PIN 0
 
-#define HEATER_1_PIN 7
+#define HEATER_1_PIN -1 //7
 #define TEMP_1_PIN 1
 
 #ifdef BARICUDA
@@ -1703,28 +1703,28 @@
 #endif
 #define TEMP_2_PIN -1
 
-#define E0_STEP_PIN         34
-#define E0_DIR_PIN          43
-#define E0_ENABLE_PIN       26
-#define E0_MS1_PIN 65
-#define E0_MS2_PIN 66
+#define E1_STEP_PIN         34
+#define E1_DIR_PIN          43
+#define E1_ENABLE_PIN       26
+#define E1_MS1_PIN 65
+#define E1_MS2_PIN 66
 
-#define E1_STEP_PIN         33
-#define E1_DIR_PIN          42
-#define E1_ENABLE_PIN       25
-#define E1_MS1_PIN 63
-#define E1_MS2_PIN 64
+#define E0_STEP_PIN         33
+#define E0_DIR_PIN          42
+#define E0_ENABLE_PIN       25
+#define E0_MS1_PIN 63
+#define E0_MS2_PIN 64
 
 #define DIGIPOTSS_PIN 38
-#define DIGIPOT_CHANNELS {4,5,3,0,1} // X Y Z E0 E1 digipot channels to stepper driver mapping
+#define DIGIPOT_CHANNELS {4,5,3,1,0} // X Y Z E0 E1 digipot channels to stepper driver mapping
 
 #define SDPOWER            -1
 #define SDSS               53
 #define LED_PIN            13
 #define FAN_PIN            8
 #define PS_ON_PIN          4
-#define KILL_PIN           -1 //80 with Smart Controller LCD
-#define SUICIDE_PIN        -1  //PIN that has to be turned on right after start, to keep power flowing.
+#define KILL_PIN           80 // with Smart Controller LCD
+#define SUICIDE_PIN        -1  // PIN that has to be turned on right after start, to keep power flowing.
 
 #ifdef ULTRA_LCD
   #define KILL_PIN 80
