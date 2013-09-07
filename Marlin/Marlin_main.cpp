@@ -1062,7 +1062,12 @@ void process_commands()
            }
            else {
              current_position[i] = code_value()+add_homeing[i];
+#ifdef DELTA
+             calculate_delta(current_position);
+             plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
+#else
              plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+#endif             
            }
         }
       }
