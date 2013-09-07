@@ -103,6 +103,9 @@ char *itostr3(const int &xx);
 char *itostr3left(const int &xx);
 char *itostr4(const int &xx);
 
+// Signed
+char *sitostr4(int xx);
+
 char *ftostr3(const float &x);
 char *ftostr31ns(const float &x); // float to string without sign character
 char *ftostr31(const float &x);

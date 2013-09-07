@@ -1278,6 +1278,24 @@ char *itostr3left(const int &xx)
   return conv;
 }
 
+char *sitostr4(int xx)
+{
+  if(xx<0)
+  {
+    conv[0]='-';
+    xx*=-1;
+  }
+  else
+  {
+    conv[0]='+';
+  }
+  conv[1]=(xx/100)%10+'0';
+  conv[2]=(xx/10)%10+'0';
+  conv[3]=(xx)%10+'0';
+  conv[4]=0;
+  return conv;
+}
+
 char *itostr4(const int &xx)
 {
   if (xx >= 1000)
