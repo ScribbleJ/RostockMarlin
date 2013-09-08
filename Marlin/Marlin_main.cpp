@@ -267,6 +267,7 @@ bool target_direction;
 
 void get_arc_coordinates();
 bool setTargetedHotend(int code);
+float probe_z();
 
 void serial_echopair_P(const char *s_P, float v)
     { serialprintPGM(s_P); SERIAL_ECHO(v); }
@@ -1072,6 +1073,11 @@ void process_commands()
         }
       }
       break;
+    case 500: // G500 - Probe Z
+      SERIAL_PROTOCOLPGM("Probe Z: ");
+      SERIAL_PROTOCOLLN(probe_z());
+      break;
+
     }
   }
 
@@ -2780,5 +2786,59 @@ bool setTargetedHotend(int code){
     }
   }
   return false;
+}
+
+// Expect a probe attached to Z MIN endstop to trigger Z hitting bottom.
+// For Delta, MIN X and MIN Y should (must?) also be set to the same pin as MIN Z
+float probe_z()
+{
+  float z_beg;
+  float z_end;
+  float z_steps_beg;
+  float z_steps_end;
+
+  st_synchronize();
+
+  z_beg = current_position[Z_AXIS];
+  z_steps_beg = st_get_position(Z_AXIS);
+
+  enable_endstops(true);
+
+  destination[X_AXIS] = current_position[X_AXIS];
+  destination[Y_AXIS] = current_position[Y_AXIS];
+  destination[Z_AXIS] = 0;
+  destination[E_AXIS] = current_position[E_AXIS];
+
+  if(code_seen('F')) 
+    feedrate = code_value();
+
+#ifdef DELTA
+  calculate_delta(destination);
+  plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS],
+                   destination[E_AXIS], feedrate*feedmultiply/60.0/100.0,
+                   active_extruder);
+#else                   
+  plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS],
+                   destination[E_AXIS], feedrate*feedmultiply/60.0/100.0,
+                   active_extruder);
+#endif                   
+
+  st_synchronize();
+
+  enable_endstops(false);
+  endstops_hit_on_purpose();
+
+  z_steps_end = st_get_position(Z_AXIS);
+  z_end = z_beg - ((z_steps_beg - z_steps_end) / 80.0);
+
+  current_position[Z_AXIS] = z_end;
+
+#ifdef DELTA
+  calculate_delta(current_position);
+  plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
+#endif  
+
+  return z_end;
+
 }
 
