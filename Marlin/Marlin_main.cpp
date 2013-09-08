@@ -268,6 +268,7 @@ bool target_direction;
 void get_arc_coordinates();
 bool setTargetedHotend(int code);
 float probe_z();
+void probe_and_adjust_z();
 
 void serial_echopair_P(const char *s_P, float v)
     { serialprintPGM(s_P); SERIAL_ECHO(v); }
@@ -1074,8 +1075,12 @@ void process_commands()
       }
       break;
     case 500: // G500 - Probe Z
-      SERIAL_PROTOCOLPGM("Probe Z: ");
+      // SERIAL_PROTOCOLPGM("Probe Z: ");
       SERIAL_PROTOCOLLN(probe_z());
+      break;
+    case 501: // G501 - Probe Multiple Z and Adjust
+      // SERIAL_PROTOCOLLNPGM("Probing...");
+      probe_and_adjust_z();
       break;
 
     }
@@ -2809,6 +2814,7 @@ float probe_z()
   destination[Z_AXIS] = 0;
   destination[E_AXIS] = current_position[E_AXIS];
 
+  saved_feedrate = feedrate; 
   if(code_seen('F')) 
     feedrate = code_value();
 
@@ -2838,7 +2844,53 @@ float probe_z()
   plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
 #endif  
 
+  feedrate = saved_feedrate; 
+
   return z_end;
 
 }
 
+void probe_and_adjust_z()
+{
+  // TODO: Move positions to config file instead of hardcoded.
+  // TODO: Handle Feedrate sanely
+  float measured_z[4];
+
+  //SERIAL_PROTOCOLLNPGM("Measuring X Tower...");
+  destination[X_AXIS] = -77.94;
+  destination[Y_AXIS] = -45;
+  destination[Z_AXIS] = 20;
+  prepare_move();
+  measured_z[0] = probe_z();
+
+  //SERIAL_PROTOCOLLNPGM("Measuring Y Tower...");
+  destination[X_AXIS] = 77.94;
+  destination[Y_AXIS] = -45;
+  destination[Z_AXIS] = 20;
+  prepare_move();
+  measured_z[1] = probe_z();
+
+  //SERIAL_PROTOCOLLNPGM("Measuring Z Tower...");
+  destination[X_AXIS] = 0;
+  destination[Y_AXIS] = 90;
+  destination[Z_AXIS] = 20;
+  prepare_move();
+  measured_z[2] = probe_z();
+
+  //SERIAL_PROTOCOLLNPGM("Measuring Center...");
+  destination[X_AXIS] = 0;
+  destination[Y_AXIS] = 0;
+  destination[Z_AXIS] = 20;
+  prepare_move();
+  measured_z[3] = probe_z();
+
+  SERIAL_PROTOCOLPGM("X: ");
+  SERIAL_PROTOCOL(measured_z[0]);
+  SERIAL_PROTOCOLPGM(" Y: ");
+  SERIAL_PROTOCOL(measured_z[1]);
+  SERIAL_PROTOCOLPGM(" Z: ");
+  SERIAL_PROTOCOL(measured_z[2]);
+  SERIAL_PROTOCOLPGM(" C: ");
+  SERIAL_PROTOCOLLN(measured_z[3]);
+
+}
