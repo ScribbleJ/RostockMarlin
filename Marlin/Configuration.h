@@ -95,8 +95,11 @@
 // Horizontal offset of the universal joints on the carriages.
 #define DELTA_CARRIAGE_OFFSET 35.0 // mm
 
+// If printbed is low in the middle of platform, add to this number to raise it.
+#define DELTA_FUDGE 0.5
+
 // Effective horizontal distance bridged by diagonal push rods.
-#define DELTA_RADIUS (DELTA_SMOOTH_ROD_OFFSET-DELTA_EFFECTOR_OFFSET-DELTA_CARRIAGE_OFFSET)
+#define DELTA_RADIUS (DELTA_SMOOTH_ROD_OFFSET-DELTA_EFFECTOR_OFFSET-DELTA_CARRIAGE_OFFSET+DELTA_FUDGE)
 
 // Effective X/Y positions of the three vertical towers.
 #define SIN_60 0.8660254037844386
@@ -107,6 +110,9 @@
 #define DELTA_TOWER2_Y -COS_60*DELTA_RADIUS
 #define DELTA_TOWER3_X 0.0 // back middle tower
 #define DELTA_TOWER3_Y DELTA_RADIUS
+
+// Difference between probe 0 and actual 0
+#define PROBE_OFFSET 10.41
 
 //===========================================================================
 //=============================Thermal Settings  ============================

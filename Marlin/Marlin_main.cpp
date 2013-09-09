@@ -173,6 +173,7 @@ float endstop_adj[3]={0,0,0};
 #endif
 float min_pos[3] = { X_MIN_POS, Y_MIN_POS, Z_MIN_POS };
 float max_pos[3] = { X_MAX_POS, Y_MAX_POS, Z_MAX_POS };
+float home_pos[3] = { X_HOME_POS, Y_HOME_POS, Z_HOME_POS };
 
 // Extruder offset
 #if EXTRUDERS > 1
@@ -713,7 +714,7 @@ static int dual_x_carriage_mode = DEFAULT_DUAL_X_CARRIAGE_MODE;
  
 static float x_home_pos(int extruder) {
   if (extruder == 0)
-    return base_home_pos(X_AXIS) + add_homeing[X_AXIS];
+    return home_pos[X_AXIS] + add_homeing[X_AXIS];
   else
     // In dual carriage mode the extruder offset provides an override of the
     // second X-carriage offset when homed - otherwise X2_HOME_POS is used.
@@ -753,9 +754,9 @@ static void axis_is_at_home(int axis) {
     }
   }
 #endif
-  current_position[axis] = base_home_pos(axis) + add_homeing[axis];
-  min_pos[axis] =          base_min_pos(axis) + add_homeing[axis];
-  max_pos[axis] =          base_max_pos(axis) + add_homeing[axis];
+  current_position[axis] = home_pos[axis] + add_homeing[axis];
+//  min_pos[axis] =          base_min_pos(axis) + add_homeing[axis];
+//  max_pos[axis] =          base_max_pos(axis) + add_homeing[axis];
 }
 
 static void homeaxis(int axis) {
@@ -917,6 +918,7 @@ void process_commands()
           // all axis have to home at the same time
 
           // Move all carriages up together until the first endstop is hit.
+          // TODO: After first stop is hit other two should move up together too.
           current_position[X_AXIS] = 0;
           current_position[Y_AXIS] = 0;
           current_position[Z_AXIS] = 0;
@@ -1591,19 +1593,27 @@ void process_commands()
     case 114: // M114
       SERIAL_PROTOCOLPGM("X:");
       SERIAL_PROTOCOL(current_position[X_AXIS]);
-      SERIAL_PROTOCOLPGM("Y:");
+      SERIAL_PROTOCOLPGM(" Y:");
       SERIAL_PROTOCOL(current_position[Y_AXIS]);
-      SERIAL_PROTOCOLPGM("Z:");
+      SERIAL_PROTOCOLPGM(" Z:");
       SERIAL_PROTOCOL(current_position[Z_AXIS]);
-      SERIAL_PROTOCOLPGM("E:");
-      SERIAL_PROTOCOL(current_position[E_AXIS]);
+      SERIAL_PROTOCOLPGM(" E:");
+      SERIAL_PROTOCOLLN(current_position[E_AXIS]);
 
       SERIAL_PROTOCOLPGM(MSG_COUNT_X);
       SERIAL_PROTOCOL(float(st_get_position(X_AXIS))/axis_steps_per_unit[X_AXIS]);
-      SERIAL_PROTOCOLPGM("Y:");
+      SERIAL_PROTOCOLPGM(" Y:");
       SERIAL_PROTOCOL(float(st_get_position(Y_AXIS))/axis_steps_per_unit[Y_AXIS]);
-      SERIAL_PROTOCOLPGM("Z:");
-      SERIAL_PROTOCOL(float(st_get_position(Z_AXIS))/axis_steps_per_unit[Z_AXIS]);
+      SERIAL_PROTOCOLPGM(" Z:");
+      SERIAL_PROTOCOLLN(float(st_get_position(Z_AXIS))/axis_steps_per_unit[Z_AXIS]);
+
+
+      SERIAL_PROTOCOLPGM(MSG_COUNT_X);
+      SERIAL_PROTOCOL(endstop_adj[0]);
+      SERIAL_PROTOCOLPGM(" Y:");
+      SERIAL_PROTOCOL(endstop_adj[1]);
+      SERIAL_PROTOCOLPGM(" Z:");
+      SERIAL_PROTOCOL(endstop_adj[2]);
 
       SERIAL_PROTOCOLLN("");
       break;
@@ -2855,6 +2865,8 @@ void probe_and_adjust_z()
   // TODO: Move positions to config file instead of hardcoded.
   // TODO: Handle Feedrate sanely
   float measured_z[4];
+  float max_z;
+  float z_diff;
 
   //SERIAL_PROTOCOLLNPGM("Measuring X Tower...");
   destination[X_AXIS] = -77.94;
@@ -2884,6 +2896,7 @@ void probe_and_adjust_z()
   prepare_move();
   measured_z[3] = probe_z();
 
+  // Output Measurements
   SERIAL_PROTOCOLPGM("X: ");
   SERIAL_PROTOCOL(measured_z[0]);
   SERIAL_PROTOCOLPGM(" Y: ");
@@ -2892,5 +2905,23 @@ void probe_and_adjust_z()
   SERIAL_PROTOCOL(measured_z[2]);
   SERIAL_PROTOCOLPGM(" C: ");
   SERIAL_PROTOCOLLN(measured_z[3]);
+
+  
+  // Set endstop_adj to compensate for off-level bed.
+#define MAX(X,Y) (X > Y ? X : Y)
+  max_z = MAX(measured_z[0], MAX(measured_z[1], measured_z[2]));
+  endstop_adj[X_AXIS] = -(max_z - measured_z[0]) + endstop_adj[X_AXIS];
+  endstop_adj[Y_AXIS] = -(max_z - measured_z[1]) + endstop_adj[Y_AXIS];
+  endstop_adj[Z_AXIS] = -(max_z - measured_z[2]) + endstop_adj[Z_AXIS];
+
+  // TODO: Fix DELTA_RADIUS settings to compensate for unlevel center
+
+
+  // Adjust overall height to fit by changing home_pos and max_pos
+  z_diff = max_z - PROBE_OFFSET;
+
+  home_pos[Z_AXIS] = home_pos[Z_AXIS] - z_diff;
+  max_pos[Z_AXIS] = max_pos[Z_AXIS] - z_diff;
+
 
 }
