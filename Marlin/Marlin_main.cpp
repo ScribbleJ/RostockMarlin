@@ -2866,6 +2866,7 @@ void probe_and_adjust_z()
   // TODO: Handle Feedrate sanely
   float measured_z[4];
   float max_z;
+  float min_z;
   float z_diff;
 
   //SERIAL_PROTOCOLLNPGM("Measuring X Tower...");
@@ -2896,6 +2897,13 @@ void probe_and_adjust_z()
   prepare_move();
   measured_z[3] = probe_z();
 
+  // Return to center
+  destination[X_AXIS] = 0;
+  destination[Y_AXIS] = 0;
+  destination[Z_AXIS] = 20;
+  prepare_move();
+  st_synchronize();
+
   // Output Measurements
   SERIAL_PROTOCOLPGM("X: ");
   SERIAL_PROTOCOL(measured_z[0]);
@@ -2909,19 +2917,48 @@ void probe_and_adjust_z()
   
   // Set endstop_adj to compensate for off-level bed.
 #define MAX(X,Y) (X > Y ? X : Y)
+#define MIN(X,Y) (X < Y ? X : Y)
   max_z = MAX(measured_z[0], MAX(measured_z[1], measured_z[2]));
-  endstop_adj[X_AXIS] = -(max_z - measured_z[0]) + endstop_adj[X_AXIS];
-  endstop_adj[Y_AXIS] = -(max_z - measured_z[1]) + endstop_adj[Y_AXIS];
-  endstop_adj[Z_AXIS] = -(max_z - measured_z[2]) + endstop_adj[Z_AXIS];
+  min_z = MIN(measured_z[0], MIN(measured_z[1], measured_z[2]));
+
+  // Skip any adjustment if min and max are within a step or two
+  // TODO: Base this decision on the steps per mm of the axis.
+  // on Rostock Max, is 80steps/mm, so 0.01 or 0.02 is good.
+  if(max_z - min_z > 0.02)
+  {
+    SERIAL_PROTOCOLLNPGM("Adjusting.");
+    endstop_adj[X_AXIS] = -(max_z - measured_z[0]) + endstop_adj[X_AXIS];
+    endstop_adj[Y_AXIS] = -(max_z - measured_z[1]) + endstop_adj[Y_AXIS];
+    endstop_adj[Z_AXIS] = -(max_z - measured_z[2]) + endstop_adj[Z_AXIS];
+
+    // Apply changes -- Changes also re-applied during homing.
+
+    // Set current position to 0,
+    plan_set_position(0.0,0.0,0.0, current_position[E_AXIS]);
+
+    // Move by adjusted amount
+    destination[X_AXIS] = -(max_z - measured_z[0]);
+    destination[Y_AXIS] = -(max_z - measured_z[1]);
+    destination[Z_AXIS] = -(max_z - measured_z[2]);
+    plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], current_position[E_AXIS], feedrate/60/100, active_extruder);
+    st_synchronize();
+  }
 
   // TODO: Fix DELTA_RADIUS settings to compensate for unlevel center
 
-
   // Adjust overall height to fit by changing home_pos and max_pos
+  // TODO: Think about whether this should be min_z.
   z_diff = max_z - PROBE_OFFSET;
-
   home_pos[Z_AXIS] = home_pos[Z_AXIS] - z_diff;
   max_pos[Z_AXIS] = max_pos[Z_AXIS] - z_diff;
+  current_position[Z_AXIS] = current_position[Z_AXIS] - z_diff;
+  SERIAL_PROTOCOLPGM("ZDiff: ");
+  SERIAL_PROTOCOL(z_diff);
+  SERIAL_PROTOCOLPGM(" Max: ");
+  SERIAL_PROTOCOLLN(max_pos[Z_AXIS]);
 
+  // Re-set current position to account for adjustment.
+  calculate_delta(current_position);
+  plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
 
 }
