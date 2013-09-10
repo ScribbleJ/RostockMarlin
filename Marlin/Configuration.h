@@ -125,7 +125,7 @@
 #define PROBE_MARGIN 0.05
 
 // Difference between probe 0 and actual 0
-#define PROBE_OFFSET_Z 10.5
+#define PROBE_OFFSET_Z 10.25
 
 // Height to begin each probe operation.
 #define PROBE_FROM_Z 20

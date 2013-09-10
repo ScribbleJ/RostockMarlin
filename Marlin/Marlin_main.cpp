@@ -2847,7 +2847,7 @@ float probe_z()
   endstops_hit_on_purpose();
 
   z_steps_end = st_get_position(Z_AXIS);
-  z_end = z_beg - ((z_steps_beg - z_steps_end) / 80.0);
+  z_end = z_beg - ((z_steps_beg - z_steps_end) / axis_steps_per_unit[Z_AXIS]);
 
   current_position[Z_AXIS] = z_end;
 
