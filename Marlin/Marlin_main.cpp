@@ -212,6 +212,7 @@ int EtoPPressure=0;
 
 #ifdef DELTA
 float delta[3] = {0.0, 0.0, 0.0};
+float delta_rad = DELTA_RADIUS;
 #endif
 
 //===========================================================================
@@ -1608,14 +1609,12 @@ void process_commands()
       SERIAL_PROTOCOLLN(float(st_get_position(Z_AXIS))/axis_steps_per_unit[Z_AXIS]);
 
 
-      SERIAL_PROTOCOLPGM(MSG_COUNT_X);
+      SERIAL_PROTOCOLPGM("Endstop Adjust: X:");
       SERIAL_PROTOCOL(endstop_adj[0]);
       SERIAL_PROTOCOLPGM(" Y:");
       SERIAL_PROTOCOL(endstop_adj[1]);
       SERIAL_PROTOCOLPGM(" Z:");
-      SERIAL_PROTOCOL(endstop_adj[2]);
-
-      SERIAL_PROTOCOLLN("");
+      SERIAL_PROTOCOLLN(endstop_adj[2]);
       break;
     case 120: // M120
       enable_endstops(false) ;
@@ -1702,6 +1701,10 @@ void process_commands()
       {
         if(code_seen(axis_codes[i])) endstop_adj[i] = code_value();
       }
+      break;
+    case 667: // M667 set delta radius
+      if(code_seen('P'))
+        delta_rad = code_value();
       break;
     #endif
     #ifdef FWRETRACT
@@ -2442,16 +2445,16 @@ void clamp_to_software_endstops(float target[3])
 void calculate_delta(float cartesian[3])
 {
   delta[X_AXIS] = sqrt(DELTA_DIAGONAL_ROD_2
-                       - sq(DELTA_TOWER1_X-cartesian[X_AXIS])
-                       - sq(DELTA_TOWER1_Y-cartesian[Y_AXIS])
+                       - sq(-SIN_60 * delta_rad - cartesian[X_AXIS])
+                       - sq(-COS_60 * delta_rad - cartesian[Y_AXIS])
                        ) + cartesian[Z_AXIS];
   delta[Y_AXIS] = sqrt(DELTA_DIAGONAL_ROD_2
-                       - sq(DELTA_TOWER2_X-cartesian[X_AXIS])
-                       - sq(DELTA_TOWER2_Y-cartesian[Y_AXIS])
+                       - sq(SIN_60  * delta_rad - cartesian[X_AXIS])
+                       - sq(-COS_60 * delta_rad - cartesian[Y_AXIS])
                        ) + cartesian[Z_AXIS];
   delta[Z_AXIS] = sqrt(DELTA_DIAGONAL_ROD_2
-                       - sq(DELTA_TOWER3_X-cartesian[X_AXIS])
-                       - sq(DELTA_TOWER3_Y-cartesian[Y_AXIS])
+                       - sq(0.0          - cartesian[X_AXIS])
+                       - sq(delta_rad - cartesian[Y_AXIS])
                        ) + cartesian[Z_AXIS];
   /*
   SERIAL_ECHOPGM("cartesian x="); SERIAL_ECHO(cartesian[X_AXIS]);
@@ -2825,8 +2828,7 @@ float probe_z()
   destination[E_AXIS] = current_position[E_AXIS];
 
   saved_feedrate = feedrate; 
-  if(code_seen('F')) 
-    feedrate = code_value();
+  feedrate = PROBE_FEED;
 
 #ifdef DELTA
   calculate_delta(destination);
@@ -2869,38 +2871,41 @@ void probe_and_adjust_z()
   float min_z;
   float z_diff;
 
+  if(code_seen('F')) 
+    feedrate = code_value();
+
   //SERIAL_PROTOCOLLNPGM("Measuring X Tower...");
-  destination[X_AXIS] = -86.60;
-  destination[Y_AXIS] = -50;
-  destination[Z_AXIS] = 20;
+  destination[X_AXIS] = PROBE_TOWER_X_X;
+  destination[Y_AXIS] = PROBE_TOWER_X_Y;
+  destination[Z_AXIS] = PROBE_FROM_Z;
   prepare_move();
   measured_z[0] = probe_z();
 
   //SERIAL_PROTOCOLLNPGM("Measuring Y Tower...");
-  destination[X_AXIS] = 86.60;
-  destination[Y_AXIS] = -50;
-  destination[Z_AXIS] = 20;
+  destination[X_AXIS] = PROBE_TOWER_Y_X;
+  destination[Y_AXIS] = PROBE_TOWER_Y_Y;
+  destination[Z_AXIS] = PROBE_FROM_Z;
   prepare_move();
   measured_z[1] = probe_z();
 
   //SERIAL_PROTOCOLLNPGM("Measuring Z Tower...");
-  destination[X_AXIS] = 0;
-  destination[Y_AXIS] = 100;
-  destination[Z_AXIS] = 20;
+  destination[X_AXIS] = PROBE_TOWER_Z_X;
+  destination[Y_AXIS] = PROBE_TOWER_Z_Y;
+  destination[Z_AXIS] = PROBE_FROM_Z;
   prepare_move();
   measured_z[2] = probe_z();
 
   //SERIAL_PROTOCOLLNPGM("Measuring Center...");
-  destination[X_AXIS] = 0;
-  destination[Y_AXIS] = 0;
-  destination[Z_AXIS] = 20;
+  destination[X_AXIS] = PROBE_CENTER_X;
+  destination[Y_AXIS] = PROBE_CENTER_Y;
+  destination[Z_AXIS] = PROBE_FROM_Z;
   prepare_move();
   measured_z[3] = probe_z();
 
   // Return to center
-  destination[X_AXIS] = 0;
-  destination[Y_AXIS] = 0;
-  destination[Z_AXIS] = 20;
+  destination[X_AXIS] = PROBE_CENTER_X;
+  destination[Y_AXIS] = PROBE_CENTER_Y;
+  destination[Z_AXIS] = PROBE_FROM_Z;
   prepare_move();
   st_synchronize();
 
@@ -2921,12 +2926,12 @@ void probe_and_adjust_z()
   max_z = MAX(measured_z[0], MAX(measured_z[1], measured_z[2]));
   min_z = MIN(measured_z[0], MIN(measured_z[1], measured_z[2]));
 
-  // Skip any adjustment if min and max are within a step or two
+  // Skip any adjustment if min and max are within a margin of error
   // TODO: Base this decision on the steps per mm of the axis.
-  // on Rostock Max, is 80steps/mm, so 0.01 or 0.02 is good.
-  if(max_z - min_z > 0.02)
+  // on Rostock Max, is 80steps/mm, so 0.02+ is good.
+  if(max_z - min_z > PROBE_MARGIN)
   {
-    SERIAL_PROTOCOLLNPGM("Adjusting.");
+    SERIAL_PROTOCOLLNPGM("Adjusting towers.");
     endstop_adj[X_AXIS] = -(max_z - measured_z[0]) + endstop_adj[X_AXIS];
     endstop_adj[Y_AXIS] = -(max_z - measured_z[1]) + endstop_adj[Y_AXIS];
     endstop_adj[Z_AXIS] = -(max_z - measured_z[2]) + endstop_adj[Z_AXIS];
@@ -2945,16 +2950,28 @@ void probe_and_adjust_z()
   }
 
   // TODO: Fix DELTA_RADIUS settings to compensate for unlevel center
+  // Only adjust Delta Radius after Towers are fit.
+  else if(measured_z[3] > max_z || measured_z[3] < min_z)
+  {
+    SERIAL_PROTOCOLLNPGM("Adjusting Radius");
+    SERIAL_PROTOCOLPGM("Old DR: ");
+    SERIAL_PROTOCOLLN(delta_rad);
+
+    delta_rad -= (measured_z[3] - max_z);
+  
+    SERIAL_PROTOCOLPGM("New DR: ");
+    SERIAL_PROTOCOLLN(delta_rad);
+
+  }
 
   // Adjust overall height to fit by changing home_pos and max_pos
-  z_diff = max_z - PROBE_OFFSET;
+  max_z = MAX(measured_z[0], MAX(measured_z[1], MAX(measured_z[2], measured_z[3])));
+  z_diff = max_z - PROBE_OFFSET_Z;
   home_pos[Z_AXIS] = home_pos[Z_AXIS] - z_diff;
   max_pos[Z_AXIS] = max_pos[Z_AXIS] - z_diff;
   current_position[Z_AXIS] = current_position[Z_AXIS] - z_diff;
   SERIAL_PROTOCOLPGM("ZDiff: ");
   SERIAL_PROTOCOL(z_diff);
-  SERIAL_PROTOCOLPGM(" Home: ");
-  SERIAL_PROTOCOLLN(home_pos[Z_AXIS]);
   SERIAL_PROTOCOLPGM(" Max: ");
   SERIAL_PROTOCOLLN(max_pos[Z_AXIS]);
 

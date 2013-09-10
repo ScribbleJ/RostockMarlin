@@ -96,7 +96,8 @@
 #define DELTA_CARRIAGE_OFFSET 35.0 // mm
 
 // If printbed is low in the middle of platform, add to this number to raise it.
-#define DELTA_FUDGE 0.65
+//#define DELTA_FUDGE 0.65
+#define DELTA_FUDGE -2.0
 
 // Effective horizontal distance bridged by diagonal push rods.
 #define DELTA_RADIUS (DELTA_SMOOTH_ROD_OFFSET-DELTA_EFFECTOR_OFFSET-DELTA_CARRIAGE_OFFSET+DELTA_FUDGE)
@@ -111,8 +112,36 @@
 #define DELTA_TOWER3_X 0.0 // back middle tower
 #define DELTA_TOWER3_Y DELTA_RADIUS
 
+//////////////////////////////////////////////////////////////////////////////////
+///////////          Delta Probing and Auto Calibration            ///////////////
+//////////////////////////////////////////////////////////////////////////////////
+
+// Feedrate during probe
+#define PROBE_FEED 1000
+
+// Distance in mm considered 'good enough' for autolevel
+// Warning: Setting this too low can cause autolevel to never complete and therefore
+// auto DELTA_RADIUS will never happen.
+#define PROBE_MARGIN 0.05
+
 // Difference between probe 0 and actual 0
-#define PROBE_OFFSET 10.45
+#define PROBE_OFFSET_Z 10.5
+
+// Height to begin each probe operation.
+#define PROBE_FROM_Z 20
+
+// Location for each probe operation to begin.
+#define PROBE_TOWER_X_X -86.60
+#define PROBE_TOWER_X_Y -50
+
+#define PROBE_TOWER_Y_X 86.60
+#define PROBE_TOWER_Y_Y -50
+
+#define PROBE_TOWER_Z_X 0
+#define PROBE_TOWER_Z_Y 100
+
+#define PROBE_CENTER_X  0
+#define PROBE_CENTER_Y  0
 
 //===========================================================================
 //=============================Thermal Settings  ============================
