@@ -2870,22 +2870,22 @@ void probe_and_adjust_z()
   float z_diff;
 
   //SERIAL_PROTOCOLLNPGM("Measuring X Tower...");
-  destination[X_AXIS] = -77.94;
-  destination[Y_AXIS] = -45;
+  destination[X_AXIS] = -86.60;
+  destination[Y_AXIS] = -50;
   destination[Z_AXIS] = 20;
   prepare_move();
   measured_z[0] = probe_z();
 
   //SERIAL_PROTOCOLLNPGM("Measuring Y Tower...");
-  destination[X_AXIS] = 77.94;
-  destination[Y_AXIS] = -45;
+  destination[X_AXIS] = 86.60;
+  destination[Y_AXIS] = -50;
   destination[Z_AXIS] = 20;
   prepare_move();
   measured_z[1] = probe_z();
 
   //SERIAL_PROTOCOLLNPGM("Measuring Z Tower...");
   destination[X_AXIS] = 0;
-  destination[Y_AXIS] = 90;
+  destination[Y_AXIS] = 100;
   destination[Z_AXIS] = 20;
   prepare_move();
   measured_z[2] = probe_z();
@@ -2947,13 +2947,14 @@ void probe_and_adjust_z()
   // TODO: Fix DELTA_RADIUS settings to compensate for unlevel center
 
   // Adjust overall height to fit by changing home_pos and max_pos
-  // TODO: Think about whether this should be min_z.
   z_diff = max_z - PROBE_OFFSET;
   home_pos[Z_AXIS] = home_pos[Z_AXIS] - z_diff;
   max_pos[Z_AXIS] = max_pos[Z_AXIS] - z_diff;
   current_position[Z_AXIS] = current_position[Z_AXIS] - z_diff;
   SERIAL_PROTOCOLPGM("ZDiff: ");
   SERIAL_PROTOCOL(z_diff);
+  SERIAL_PROTOCOLPGM(" Home: ");
+  SERIAL_PROTOCOLLN(home_pos[Z_AXIS]);
   SERIAL_PROTOCOLPGM(" Max: ");
   SERIAL_PROTOCOLLN(max_pos[Z_AXIS]);
 

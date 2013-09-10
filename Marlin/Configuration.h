@@ -96,7 +96,7 @@
 #define DELTA_CARRIAGE_OFFSET 35.0 // mm
 
 // If printbed is low in the middle of platform, add to this number to raise it.
-#define DELTA_FUDGE 0.5
+#define DELTA_FUDGE 0.65
 
 // Effective horizontal distance bridged by diagonal push rods.
 #define DELTA_RADIUS (DELTA_SMOOTH_ROD_OFFSET-DELTA_EFFECTOR_OFFSET-DELTA_CARRIAGE_OFFSET+DELTA_FUDGE)
@@ -112,7 +112,7 @@
 #define DELTA_TOWER3_Y DELTA_RADIUS
 
 // Difference between probe 0 and actual 0
-#define PROBE_OFFSET 10.41
+#define PROBE_OFFSET 10.45
 
 //===========================================================================
 //=============================Thermal Settings  ============================
