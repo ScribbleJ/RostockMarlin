@@ -96,8 +96,8 @@
 #define DELTA_CARRIAGE_OFFSET 35.0 // mm
 
 // If printbed is low in the middle of platform, add to this number to raise it.
-//#define DELTA_FUDGE 0.65
-#define DELTA_FUDGE -2.0
+#define DELTA_FUDGE 0.65
+//#define DELTA_FUDGE -2.0
 
 // Effective horizontal distance bridged by diagonal push rods.
 #define DELTA_RADIUS (DELTA_SMOOTH_ROD_OFFSET-DELTA_EFFECTOR_OFFSET-DELTA_CARRIAGE_OFFSET+DELTA_FUDGE)
@@ -128,17 +128,17 @@
 #define PROBE_OFFSET_Z 10.25
 
 // Height to begin each probe operation.
-#define PROBE_FROM_Z 20
+#define PROBE_FROM_Z 20 + PROBE_OFFSET_Z
 
 // Location for each probe operation to begin.
-#define PROBE_TOWER_X_X -86.60
-#define PROBE_TOWER_X_Y -50
+#define PROBE_TOWER_X_X -77.94
+#define PROBE_TOWER_X_Y -45
 
-#define PROBE_TOWER_Y_X 86.60
-#define PROBE_TOWER_Y_Y -50
+#define PROBE_TOWER_Y_X 77.94
+#define PROBE_TOWER_Y_Y -45
 
 #define PROBE_TOWER_Z_X 0
-#define PROBE_TOWER_Z_Y 100
+#define PROBE_TOWER_Z_Y 90
 
 #define PROBE_CENTER_X  0
 #define PROBE_CENTER_Y  0
@@ -381,7 +381,8 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 // For deltabots this means top and center of the cartesian print volume.
 #define MANUAL_X_HOME_POS 0
 #define MANUAL_Y_HOME_POS 0
-#define MANUAL_Z_HOME_POS 343.3 
+//#define MANUAL_Z_HOME_POS 343.3 
+#define MANUAL_Z_HOME_POS 340.0
 // For delta: Distance between nozzle and print surface after homing.
 
 //// MOVEMENT SETTINGS

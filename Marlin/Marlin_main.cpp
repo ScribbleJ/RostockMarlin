@@ -2880,6 +2880,8 @@ void probe_and_adjust_z()
   destination[Z_AXIS] = PROBE_FROM_Z;
   prepare_move();
   measured_z[0] = probe_z();
+  destination[Z_AXIS] = PROBE_FROM_Z;
+  prepare_move();
 
   //SERIAL_PROTOCOLLNPGM("Measuring Y Tower...");
   destination[X_AXIS] = PROBE_TOWER_Y_X;
@@ -2887,6 +2889,8 @@ void probe_and_adjust_z()
   destination[Z_AXIS] = PROBE_FROM_Z;
   prepare_move();
   measured_z[1] = probe_z();
+  destination[Z_AXIS] = PROBE_FROM_Z;
+  prepare_move();
 
   //SERIAL_PROTOCOLLNPGM("Measuring Z Tower...");
   destination[X_AXIS] = PROBE_TOWER_Z_X;
@@ -2894,6 +2898,8 @@ void probe_and_adjust_z()
   destination[Z_AXIS] = PROBE_FROM_Z;
   prepare_move();
   measured_z[2] = probe_z();
+  destination[Z_AXIS] = PROBE_FROM_Z;
+  prepare_move();
 
   //SERIAL_PROTOCOLLNPGM("Measuring Center...");
   destination[X_AXIS] = PROBE_CENTER_X;
