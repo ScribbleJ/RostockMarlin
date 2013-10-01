@@ -128,7 +128,7 @@
 #define PROBE_OFFSET_Z 10.25
 
 // Height to begin each probe operation.
-#define PROBE_FROM_Z 20 + PROBE_OFFSET_Z
+#define PROBE_FROM_Z 30 + PROBE_OFFSET_Z
 
 // Location for each probe operation to begin.
 #define PROBE_TOWER_X_X -77.94
@@ -382,7 +382,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 #define MANUAL_X_HOME_POS 0
 #define MANUAL_Y_HOME_POS 0
 //#define MANUAL_Z_HOME_POS 343.3 
-#define MANUAL_Z_HOME_POS 340.0
+#define MANUAL_Z_HOME_POS 355.0
 // For delta: Distance between nozzle and print surface after homing.
 
 //// MOVEMENT SETTINGS

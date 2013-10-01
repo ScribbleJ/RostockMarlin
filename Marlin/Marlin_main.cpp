@@ -2871,118 +2871,185 @@ void probe_and_adjust_z()
   float min_z;
   float z_diff;
 
+  float allowed_diff = PROBE_MARGIN;
+  int repetitions = 1;
+  bool calibrated = false;
+
   if(code_seen('F')) 
     feedrate = code_value();
 
-  //SERIAL_PROTOCOLLNPGM("Measuring X Tower...");
-  destination[X_AXIS] = PROBE_TOWER_X_X;
-  destination[Y_AXIS] = PROBE_TOWER_X_Y;
-  destination[Z_AXIS] = PROBE_FROM_Z;
-  prepare_move();
-  measured_z[0] = probe_z();
-  destination[Z_AXIS] = PROBE_FROM_Z;
-  prepare_move();
+  if(code_seen('P'))
+    allowed_diff = code_value();
 
-  //SERIAL_PROTOCOLLNPGM("Measuring Y Tower...");
-  destination[X_AXIS] = PROBE_TOWER_Y_X;
-  destination[Y_AXIS] = PROBE_TOWER_Y_Y;
-  destination[Z_AXIS] = PROBE_FROM_Z;
-  prepare_move();
-  measured_z[1] = probe_z();
-  destination[Z_AXIS] = PROBE_FROM_Z;
-  prepare_move();
+  if(code_seen('S'))
+    repetitions = code_value();
 
-  //SERIAL_PROTOCOLLNPGM("Measuring Z Tower...");
-  destination[X_AXIS] = PROBE_TOWER_Z_X;
-  destination[Y_AXIS] = PROBE_TOWER_Z_Y;
-  destination[Z_AXIS] = PROBE_FROM_Z;
-  prepare_move();
-  measured_z[2] = probe_z();
-  destination[Z_AXIS] = PROBE_FROM_Z;
-  prepare_move();
+  if(repetitions < 1)
+    repetitions = 1;
 
-  //SERIAL_PROTOCOLLNPGM("Measuring Center...");
-  destination[X_AXIS] = PROBE_CENTER_X;
-  destination[Y_AXIS] = PROBE_CENTER_Y;
-  destination[Z_AXIS] = PROBE_FROM_Z;
-  prepare_move();
-  measured_z[3] = probe_z();
+  if(allowed_diff < 0.02)
+    SERIAL_PROTOCOLLNPGM("Warning: P less than 0.02 not recommended!");
 
-  // Return to center
-  destination[X_AXIS] = PROBE_CENTER_X;
-  destination[Y_AXIS] = PROBE_CENTER_Y;
-  destination[Z_AXIS] = PROBE_FROM_Z;
-  prepare_move();
-  st_synchronize();
 
-  // Output Measurements
-  SERIAL_PROTOCOLPGM("X: ");
-  SERIAL_PROTOCOL(measured_z[0]);
-  SERIAL_PROTOCOLPGM(" Y: ");
-  SERIAL_PROTOCOL(measured_z[1]);
-  SERIAL_PROTOCOLPGM(" Z: ");
-  SERIAL_PROTOCOL(measured_z[2]);
-  SERIAL_PROTOCOLPGM(" C: ");
-  SERIAL_PROTOCOLLN(measured_z[3]);
-
-  
-  // Set endstop_adj to compensate for off-level bed.
-#define MAX(X,Y) (X > Y ? X : Y)
-#define MIN(X,Y) (X < Y ? X : Y)
-  max_z = MAX(measured_z[0], MAX(measured_z[1], measured_z[2]));
-  min_z = MIN(measured_z[0], MIN(measured_z[1], measured_z[2]));
-
-  // Skip any adjustment if min and max are within a margin of error
-  // TODO: Base this decision on the steps per mm of the axis.
-  // on Rostock Max, is 80steps/mm, so 0.02+ is good.
-  if(max_z - min_z > PROBE_MARGIN)
+  for(int c = 0; c < repetitions; c++)
   {
-    SERIAL_PROTOCOLLNPGM("Adjusting towers.");
-    endstop_adj[X_AXIS] = -(max_z - measured_z[0]) + endstop_adj[X_AXIS];
-    endstop_adj[Y_AXIS] = -(max_z - measured_z[1]) + endstop_adj[Y_AXIS];
-    endstop_adj[Z_AXIS] = -(max_z - measured_z[2]) + endstop_adj[Z_AXIS];
+    //SERIAL_PROTOCOLLNPGM("Measuring X Tower...");
+    destination[X_AXIS] = PROBE_TOWER_X_X;
+    destination[Y_AXIS] = PROBE_TOWER_X_Y;
+    destination[Z_AXIS] = PROBE_FROM_Z;
+    prepare_move();
+    measured_z[0] = probe_z();
+    destination[Z_AXIS] = PROBE_FROM_Z;
+    prepare_move();
 
-    // Apply changes -- Changes also re-applied during homing.
+    //SERIAL_PROTOCOLLNPGM("Measuring Y Tower...");
+    destination[X_AXIS] = PROBE_TOWER_Y_X;
+    destination[Y_AXIS] = PROBE_TOWER_Y_Y;
+    destination[Z_AXIS] = PROBE_FROM_Z;
+    prepare_move();
+    measured_z[1] = probe_z();
+    destination[Z_AXIS] = PROBE_FROM_Z;
+    prepare_move();
 
-    // Set current position to 0,
-    plan_set_position(0.0,0.0,0.0, current_position[E_AXIS]);
+    //SERIAL_PROTOCOLLNPGM("Measuring Z Tower...");
+    destination[X_AXIS] = PROBE_TOWER_Z_X;
+    destination[Y_AXIS] = PROBE_TOWER_Z_Y;
+    destination[Z_AXIS] = PROBE_FROM_Z;
+    prepare_move();
+    measured_z[2] = probe_z();
+    destination[Z_AXIS] = PROBE_FROM_Z;
+    prepare_move();
 
-    // Move by adjusted amount
-    destination[X_AXIS] = -(max_z - measured_z[0]);
-    destination[Y_AXIS] = -(max_z - measured_z[1]);
-    destination[Z_AXIS] = -(max_z - measured_z[2]);
-    plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], current_position[E_AXIS], feedrate/60/100, active_extruder);
+    //SERIAL_PROTOCOLLNPGM("Measuring Center...");
+    destination[X_AXIS] = PROBE_CENTER_X;
+    destination[Y_AXIS] = PROBE_CENTER_Y;
+    destination[Z_AXIS] = PROBE_FROM_Z;
+    prepare_move();
+    measured_z[3] = probe_z();
+
+    // Return to center
+    destination[X_AXIS] = PROBE_CENTER_X;
+    destination[Y_AXIS] = PROBE_CENTER_Y;
+    destination[Z_AXIS] = PROBE_FROM_Z;
+    prepare_move();
+    st_synchronize();
+
+    // Output Measurements
+    SERIAL_PROTOCOLPGM("Measured X: ");
+    SERIAL_PROTOCOL(measured_z[0]);
+    SERIAL_PROTOCOLPGM(" Y: ");
+    SERIAL_PROTOCOL(measured_z[1]);
+    SERIAL_PROTOCOLPGM(" Z: ");
+    SERIAL_PROTOCOL(measured_z[2]);
+    SERIAL_PROTOCOLPGM(" C: ");
+    SERIAL_PROTOCOLLN(measured_z[3]);
+
+    
+    // Set endstop_adj to compensate for off-level bed.
+  #define MAX(X,Y) (X > Y ? X : Y)
+  #define MIN(X,Y) (X < Y ? X : Y)
+    max_z = MAX(measured_z[0], MAX(measured_z[1], measured_z[2]));
+    min_z = MIN(measured_z[0], MIN(measured_z[1], measured_z[2]));
+
+    // Skip any adjustment if min and max are within a margin of error
+    // TODO: Base this decision on the steps per mm of the axis.
+    // on Rostock Max, is 80steps/mm, so 0.02+ is good.
+    if(max_z - min_z > allowed_diff)
+    {
+      SERIAL_PROTOCOLLNPGM("Adjusting towers.");
+      endstop_adj[X_AXIS] = -(max_z - measured_z[0]) + endstop_adj[X_AXIS];
+      endstop_adj[Y_AXIS] = -(max_z - measured_z[1]) + endstop_adj[Y_AXIS];
+      endstop_adj[Z_AXIS] = -(max_z - measured_z[2]) + endstop_adj[Z_AXIS];
+
+      // Output new endstop offsets
+      SERIAL_PROTOCOLPGM("Offsets X: ");
+      SERIAL_PROTOCOL(endstop_adj[0]);
+      SERIAL_PROTOCOLPGM(" Y: ");
+      SERIAL_PROTOCOL(endstop_adj[1]);
+      SERIAL_PROTOCOLPGM(" Z: ");
+      SERIAL_PROTOCOLLN(endstop_adj[2]);
+
+
+      // Apply changes -- Changes also re-applied during homing.
+
+      // Set current position to 0,
+      plan_set_position(0.0,0.0,0.0, current_position[E_AXIS]);
+
+      // Move by adjusted amount
+      destination[X_AXIS] = -(max_z - measured_z[0]);
+      destination[Y_AXIS] = -(max_z - measured_z[1]);
+      destination[Z_AXIS] = -(max_z - measured_z[2]);
+      plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], current_position[E_AXIS], feedrate/60/100, active_extruder);
+      st_synchronize();
+    }
+
+    // Only adjust Delta Radius after Towers are fit.
+    else if(measured_z[3] > max_z || measured_z[3] < min_z)
+    {
+      SERIAL_PROTOCOLLNPGM("Adjusting Radius");
+      SERIAL_PROTOCOLPGM("Old DR: ");
+      SERIAL_PROTOCOL(delta_rad);
+
+      // TODO: Figure out if there is a smarter way to calculate DR adjustment.
+      delta_rad -= (measured_z[3] - max_z) * 2;  // Arbitrary, * 2 to converge faster.
+    
+      SERIAL_PROTOCOLPGM(" New DR: ");
+      SERIAL_PROTOCOLLN(delta_rad);
+
+    }
+    else
+    {
+      c = repetitions; // All done.
+      calibrated = true;
+    }
+
+    // Adjust overall height to fit by changing home_pos and max_pos
+    max_z = MAX(measured_z[0], MAX(measured_z[1], MAX(measured_z[2], measured_z[3])));
+    z_diff = max_z - PROBE_OFFSET_Z;
+
+
+    // If all three towers have been adjusted, we can minimize the 
+    // difference by subtracting the smallest distance from all
+    // distances.
+    // Use MAX because all endstop_adj are negative.  
+    // TODO: Think harder.
+    /*
+    min_z = MAX(endstop_adj[0], MAX(endstop_adj[1], endstop_adj[2]));
+    for(int c=0;c <= 3; c++)
+      endstop_adj[c] -= min_z;
+
+    z_diff -= min_z;
+    */
+
+    // Apply Z changes
+    home_pos[Z_AXIS] -= z_diff;
+    max_pos[Z_AXIS] -= z_diff;
+    current_position[Z_AXIS] -= z_diff;
+
+    SERIAL_PROTOCOLPGM("ZDiff: ");
+    SERIAL_PROTOCOL(z_diff);
+    SERIAL_PROTOCOLPGM(" Max: ");
+    SERIAL_PROTOCOLLN(max_pos[Z_AXIS]);
+
+    // Re-set current position to account for adjustment.
+    calculate_delta(current_position);
+    plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
+
+    // Move back to 0,0,probe_from_z
+    destination[X_AXIS] = PROBE_CENTER_X;
+    destination[Y_AXIS] = PROBE_CENTER_Y;
+    destination[Z_AXIS] = PROBE_FROM_Z;
+    prepare_move();
     st_synchronize();
   }
 
-  // TODO: Fix DELTA_RADIUS settings to compensate for unlevel center
-  // Only adjust Delta Radius after Towers are fit.
-  else if(measured_z[3] > max_z || measured_z[3] < min_z)
+  if(calibrated)
   {
-    SERIAL_PROTOCOLLNPGM("Adjusting Radius");
-    SERIAL_PROTOCOLPGM("Old DR: ");
-    SERIAL_PROTOCOLLN(delta_rad);
-
-    delta_rad -= (measured_z[3] - max_z);
-  
-    SERIAL_PROTOCOLPGM("New DR: ");
-    SERIAL_PROTOCOLLN(delta_rad);
-
+    SERIAL_PROTOCOLLNPGM("Achieved Calibration.");
   }
-
-  // Adjust overall height to fit by changing home_pos and max_pos
-  max_z = MAX(measured_z[0], MAX(measured_z[1], MAX(measured_z[2], measured_z[3])));
-  z_diff = max_z - PROBE_OFFSET_Z;
-  home_pos[Z_AXIS] = home_pos[Z_AXIS] - z_diff;
-  max_pos[Z_AXIS] = max_pos[Z_AXIS] - z_diff;
-  current_position[Z_AXIS] = current_position[Z_AXIS] - z_diff;
-  SERIAL_PROTOCOLPGM("ZDiff: ");
-  SERIAL_PROTOCOL(z_diff);
-  SERIAL_PROTOCOLPGM(" Max: ");
-  SERIAL_PROTOCOLLN(max_pos[Z_AXIS]);
-
-  // Re-set current position to account for adjustment.
-  calculate_delta(current_position);
-  plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
+  else
+  {
+    SERIAL_PROTOCOLLNPGM("WARN: Calibration Incomplete.");
+  }
 
 }
