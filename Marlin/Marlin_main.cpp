@@ -221,6 +221,7 @@ float delta_rad = DELTA_RADIUS;
 const char axis_codes[NUM_AXIS] = {'X', 'Y', 'Z', 'E'};
 static float destination[NUM_AXIS] = {  0.0, 0.0, 0.0, 0.0};
 static float offset[3] = {0.0, 0.0, 0.0};
+static float probe_offset_z = PROBE_OFFSET_Z;
 static bool home_all_axis = true;
 static float feedrate = 1500.0, next_feedrate, saved_feedrate;
 static long gcode_N, gcode_LastN, Stopped_gcode_LastN = 0;
@@ -270,6 +271,7 @@ bool target_direction;
 void get_arc_coordinates();
 bool setTargetedHotend(int code);
 float probe_z();
+void update_delta_rad(float dr);
 void probe_and_adjust_z();
 
 void serial_echopair_P(const char *s_P, float v)
@@ -1609,12 +1611,16 @@ void process_commands()
       SERIAL_PROTOCOLLN(float(st_get_position(Z_AXIS))/axis_steps_per_unit[Z_AXIS]);
 
 
-      SERIAL_PROTOCOLPGM("Endstop Adjust: X:");
+      SERIAL_PROTOCOLPGM("Endstop Adjust: X");
       SERIAL_PROTOCOL(endstop_adj[0]);
-      SERIAL_PROTOCOLPGM(" Y:");
+      SERIAL_PROTOCOLPGM(" Y");
       SERIAL_PROTOCOL(endstop_adj[1]);
-      SERIAL_PROTOCOLPGM(" Z:");
+      SERIAL_PROTOCOLPGM(" Z");
       SERIAL_PROTOCOLLN(endstop_adj[2]);
+
+      SERIAL_PROTOCOLPGM("DR: ");
+      SERIAL_PROTOCOLLN(delta_rad);
+
       break;
     case 120: // M120
       enable_endstops(false) ;
@@ -1704,8 +1710,18 @@ void process_commands()
       break;
     case 667: // M667 set delta radius
       if(code_seen('P'))
-        delta_rad = code_value();
+        update_delta_rad(code_value());
       break;
+    case 668: // M667 set probe offset
+      if(code_seen('P'))
+        probe_offset_z = code_value();
+      break;
+    case 669: // M669 set max position
+      if(code_seen('P'))
+        max_pos[Z_AXIS] = code_value();
+        home_pos[Z_AXIS] = code_value();
+      break;
+
     #endif
     #ifdef FWRETRACT
     case 207: //M207 - set retract length S[positive mm] F[feedrate mm/sec] Z[additional zlift/hop]
@@ -2442,15 +2458,32 @@ void clamp_to_software_endstops(float target[3])
 }
 
 #ifdef DELTA
+
+// Pre-calc DR
+// These values may seem redundant but eventually we may want to 
+// set the tower positions by changing the SIN/COS values.
+float dr_x1 = -SIN_60 * delta_rad;
+float dr_x2 = -COS_60 * delta_rad;
+float dr_y1 = SIN_60  * delta_rad;
+float dr_y2 = -COS_60 * delta_rad;
+
+void update_delta_rad(float dr)
+{
+  delta_rad = dr;
+  dr_x1 = -SIN_60 * delta_rad;
+  dr_x2 = -COS_60 * delta_rad;
+  dr_y1 = SIN_60  * delta_rad;
+  dr_y2 = -COS_60 * delta_rad;
+}
 void calculate_delta(float cartesian[3])
 {
   delta[X_AXIS] = sqrt(DELTA_DIAGONAL_ROD_2
-                       - sq(-SIN_60 * delta_rad - cartesian[X_AXIS])
-                       - sq(-COS_60 * delta_rad - cartesian[Y_AXIS])
+                       - sq(dr_x1 - cartesian[X_AXIS])
+                       - sq(dr_x2 - cartesian[Y_AXIS])
                        ) + cartesian[Z_AXIS];
   delta[Y_AXIS] = sqrt(DELTA_DIAGONAL_ROD_2
-                       - sq(SIN_60  * delta_rad - cartesian[X_AXIS])
-                       - sq(-COS_60 * delta_rad - cartesian[Y_AXIS])
+                       - sq(dr_y1 - cartesian[X_AXIS])
+                       - sq(dr_y2 - cartesian[Y_AXIS])
                        ) + cartesian[Z_AXIS];
   delta[Z_AXIS] = sqrt(DELTA_DIAGONAL_ROD_2
                        - sq(0.0          - cartesian[X_AXIS])
@@ -2992,6 +3025,7 @@ void probe_and_adjust_z()
 
       // TODO: Figure out if there is a smarter way to calculate DR adjustment.
       delta_rad -= (measured_z[3] - max_z) * 2;  // Arbitrary, * 2 to converge faster.
+      update_delta_rad(delta_rad);
     
       SERIAL_PROTOCOLPGM(" New DR: ");
       SERIAL_PROTOCOLLN(delta_rad);
@@ -3005,7 +3039,7 @@ void probe_and_adjust_z()
 
     // Adjust overall height to fit by changing home_pos and max_pos
     max_z = MAX(measured_z[0], MAX(measured_z[1], MAX(measured_z[2], measured_z[3])));
-    z_diff = max_z - PROBE_OFFSET_Z;
+    z_diff = max_z - probe_offset_z;
 
 
     // If all three towers have been adjusted, we can minimize the 
