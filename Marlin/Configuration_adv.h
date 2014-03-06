@@ -190,14 +190,14 @@
 #define INVERT_E_STEP_PIN false
 
 //default stepper release if idle
-#define DEFAULT_STEPPER_DEACTIVE_TIME 60
+#define DEFAULT_STEPPER_DEACTIVE_TIME 300
 
 #define DEFAULT_MINIMUMFEEDRATE       0.0     // minimum feedrate
 #define DEFAULT_MINTRAVELFEEDRATE     0.0
 
 // Feedrates for manual moves along X, Y, Z, E from panel
 #ifdef ULTIPANEL
-#define MANUAL_FEEDRATE {50*60, 50*60, 4*60, 60}  // set the speeds for manual moves (mm/min)
+#define MANUAL_FEEDRATE {50*60, 50*60, 50*60, 60}  // set the speeds for manual moves (mm/min)
 #endif
 
 // minimum time in microseconds that a movement needs to take if the buffer is emptied.
@@ -228,7 +228,7 @@
 #define MICROSTEP_MODES {16,16,16,16,16} // [1,2,4,8,16]
 
 // Motor Current setting (Only functional when motor driver current ref pins are connected to a digital trimpot on supported boards)
-#define DIGIPOT_MOTOR_CURRENT {165,165,165,165,185} // Values 0-255 (RAMBO 135 = ~0.75A, 185 = ~1A)
+#define DIGIPOT_MOTOR_CURRENT {165,165,165,185,185} // Values 0-255 (RAMBO 135 = ~0.75A, 185 = ~1A)
 
 
 //===========================================================================

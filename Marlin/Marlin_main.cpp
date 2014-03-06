@@ -2899,10 +2899,11 @@ void probe_and_adjust_z()
 {
   // TODO: Move positions to config file instead of hardcoded.
   // TODO: Handle Feedrate sanely
-  float measured_z[4];
-  float max_z;
-  float min_z;
-  float z_diff;
+  float measured_z[4] = {0,0,0,0};
+  float adjusted_z[3] = {0,0,0};
+  float max_z = 0;
+  float min_z = 0;
+  float z_diff = 0;
 
   float allowed_diff = PROBE_MARGIN;
   int repetitions = 1;
@@ -2990,9 +2991,19 @@ void probe_and_adjust_z()
     if(max_z - min_z > allowed_diff)
     {
       SERIAL_PROTOCOLLNPGM("Adjusting towers.");
-      endstop_adj[X_AXIS] = -(max_z - measured_z[0]) + endstop_adj[X_AXIS];
-      endstop_adj[Y_AXIS] = -(max_z - measured_z[1]) + endstop_adj[Y_AXIS];
-      endstop_adj[Z_AXIS] = -(max_z - measured_z[2]) + endstop_adj[Z_AXIS];
+      for(int x = X_AXIS; x <= Z_AXIS; x++)
+      {
+        adjusted_z[x]  = measured_z[x] - min_z;
+        endstop_adj[x] += adjusted_z[x];
+      }
+
+      // Output new endstop offsets
+      SERIAL_PROTOCOLPGM("Adjustment X: ");
+      SERIAL_PROTOCOL(adjusted_z[0]);
+      SERIAL_PROTOCOLPGM(" Y: ");
+      SERIAL_PROTOCOL(adjusted_z[1]);
+      SERIAL_PROTOCOLPGM(" Z: ");
+      SERIAL_PROTOCOLLN(adjusted_z[2]);
 
       // Output new endstop offsets
       SERIAL_PROTOCOLPGM("Offsets X: ");
@@ -3009,9 +3020,9 @@ void probe_and_adjust_z()
       plan_set_position(0.0,0.0,0.0, current_position[E_AXIS]);
 
       // Move by adjusted amount
-      destination[X_AXIS] = -(max_z - measured_z[0]);
-      destination[Y_AXIS] = -(max_z - measured_z[1]);
-      destination[Z_AXIS] = -(max_z - measured_z[2]);
+      destination[X_AXIS] = adjusted_z[0];
+      destination[Y_AXIS] = adjusted_z[1];
+      destination[Z_AXIS] = adjusted_z[2];
       plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], current_position[E_AXIS], feedrate/60/100, active_extruder);
       st_synchronize();
     }
@@ -3038,8 +3049,8 @@ void probe_and_adjust_z()
     }
 
     // Adjust overall height to fit by changing home_pos and max_pos
-    max_z = MAX(measured_z[0], MAX(measured_z[1], MAX(measured_z[2], measured_z[3])));
-    z_diff = max_z - probe_offset_z;
+    min_z = MIN(measured_z[0], MIN(measured_z[1], MIN(measured_z[2], measured_z[3])));
+    z_diff = min_z - probe_offset_z;
 
 
     // If all three towers have been adjusted, we can minimize the 
@@ -3062,8 +3073,8 @@ void probe_and_adjust_z()
 
     SERIAL_PROTOCOLPGM("ZDiff: ");
     SERIAL_PROTOCOL(z_diff);
-    SERIAL_PROTOCOLPGM(" Max: ");
-    SERIAL_PROTOCOLLN(max_pos[Z_AXIS]);
+    //SERIAL_PROTOCOLPGM(" Max: ");
+    //SERIAL_PROTOCOLLN(max_pos[Z_AXIS]);
 
     // Re-set current position to account for adjustment.
     calculate_delta(current_position);
